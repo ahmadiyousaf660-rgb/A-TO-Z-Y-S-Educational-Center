@@ -1,0 +1,7 @@
+require('dotenv').config();
+const express=require('express'); const cors=require('cors'); const OpenAI=require('openai');
+const app=express(); const port=process.env.PORT||3000;
+app.use(cors()); app.use(express.json({limit:'1mb'})); app.use(express.static('public'));
+app.get('/api/health',(req,res)=>res.json({ok:true,aiConfigured:!!process.env.OPENAI_API_KEY}));
+app.post('/api/ai',async(req,res)=>{try{if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'OPENAI_API_KEY is not configured.'});const {mode='teacher',message='',language='English'}=req.body;if(!message.trim())return res.status(400).json({error:'Message required'});const client=new OpenAI({apiKey:process.env.OPENAI_API_KEY});const system=mode==='translator'?`You are the translator for A TO Z Educational Center. Translate naturally into ${language}. Supported languages: English, Pashto, Dari (Persian), Arabic, Urdu, German. Preserve meaning. Return only the translation.`:`You are a friendly AI language teacher for A TO Z Educational Center. Target language: ${language}. Give practical conversation practice, correct mistakes briefly, and ask one follow-up question.`;const r=await client.chat.completions.create({model:'gpt-4o-mini',messages:[{role:'system',content:system},{role:'user',content:message}],temperature:.4});res.json({reply:r.choices[0].message.content});}catch(e){console.error(e);res.status(500).json({error:'AI request failed'});}});
+app.listen(port,()=>console.log(`A TO Z Educational Center on ${port}`));
